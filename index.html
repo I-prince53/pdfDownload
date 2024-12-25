@@ -1,133 +1,226 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Flip-Flop PDF Generator</title>
-</head>
-<body>
-  <h1>Flip-Flop PDF Generator</h1>
-  <button id="downloadPDF">Download PDF</button>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Highlight and Comment</title>
 
-  <!-- Load jsPDF from CDN -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+    <style>
+      .highlight {
+        background-color: yellow;
+        position: relative;
+      }
 
-  <script>
-    document.getElementById("downloadPDF").addEventListener("click", () => {
-      const { jsPDF } = window.jspdf; // Ensure jsPDF is available
-      const pdf = new jsPDF();
+      .comment-icon {
+        position: absolute;
+        top: -11px;
+        right: -12px;
+        font-size: 13px;
+        cursor: pointer;
+      }
 
-      // Title
-      pdf.setFont("Helvetica", );
-      pdf.setFontSize(16);
-      pdf.text("Introduction to Flip-Flops", 105, 20, { align: "center" });
+      .comment-icon:hover {
+        color: darkblue;
+      }
 
-      // Content (plain text without HTML tags)
-      const content = `
-4. Buses
-A bus is a communication pathway for transferring data between components in a computer system. There are three main types of buses:
+      .comment-box {
+        position: fixed;
+        top: 20%;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 350px;
+        background: #fff;
+        border: 1px solid #ccc;
+        padding: 15px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+      }
 
-a. Address Bus
-- Definition: Specifies the address of the memory location or I/O device involved in the data transfer.
-- Characteristics:
-  - Unidirectional: Data flows only from the CPU to memory or I/O devices.
-  - Width Impact: Determines the number of memory locations that can be addressed (e.g., a 32-bit address bus can address 2^32 memory locations).
+      .comments-list {
+        max-height: 100px;
+        overflow-y: auto;
+        margin: 10px 0;
+        padding: 0;
+        list-style: none;
+      }
 
-b. Data Bus
-- Definition: Transfers actual data between the CPU, memory, and I/O devices.
-- Characteristics:
-  - Bidirectional: Data can flow to and from the CPU.
-  - Width Impact: Determines the amount of data transferred in one operation (e.g., a 64-bit data bus can transfer 64 bits at a time).
+      .comments-list li {
+        padding: 5px 0;
+        border-bottom: 1px solid #ddd;
+      }
 
-c. Control Bus
-- Definition: Carries control signals to manage the activities of all connected components.
-- Functions:
-  - Specifies operations like read, write, or interrupt.
-  - Ensures synchronization between the CPU, memory, and I/O devices.
+      textarea {
+        width: 100%;
+        margin-top: 10px;
+        padding: 5px;
+      }
 
-Adders
-An adder is a digital circuit used in electronics and computer systems to perform the arithmetic operation of addition. Adders are a fundamental building block in arithmetic logic units (ALUs) within a CPU and are essential for performing calculations.
+      button {
+        padding: 8px 15px;
+        background-color: #4caf50; /* Green */
+        color: white;
+        border: none;
+        cursor: pointer;
+        margin-right: 10px;
+        border-radius: 5px;
+      }
 
-Types of Adders
-1. Half Adder
-- Definition: A half adder is a combinational circuit that performs the addition of two single-bit binary numbers (A and B).
-- Outputs:
-  - Sum (S): S = A XOR B
-  - Carry (C): C = A AND B
+      button:hover {
+        background-color: #45a049;
+      }
 
-2. Full Adder
-- Definition: A full adder adds three single-bit binary numbers: two operands (A and B) and a carry bit (Cin) from a previous operation.
-- Outputs:
-  - Sum (S): S = A XOR B XOR Cin
-  - Carry (Cout): Cout = (A AND B) + (B AND Cin) + (A AND Cin)
+      .close-btn {
+        background-color: #f44336; /* Red */
+      }
 
-Multibit Adders
-a. Ripple Carry Adder
-- Definition: A chain of full adders used to add multi-bit binary numbers.
-- Working: The carry-out of each full adder is connected to the carry-in of the next adder.
-- Limitation: Ripple carry adders are slow for large numbers because the carry must propagate through all stages.
+      .close-btn:hover {
+        background-color: #e53935;
+      }
 
-b. Carry Lookahead Adder
-- Definition: A faster type of adder that reduces the delay caused by carry propagation in a ripple carry adder.
-- Working: It uses logic to calculate carry bits in advance, based on the inputs.
-- Advantage: Much faster for large numbers compared to ripple carry adders.
+      .remove-btn {
+        background-color: #ff9800; /* Orange */
+      }
 
-Memory Hierarchy
-Memory hierarchy refers to the organization of different types of memory based on speed and size. The idea is to use faster but smaller memory (like registers and cache) for frequently accessed data, while slower but larger memory (like secondary storage) holds less frequently accessed data.
+      .remove-btn:hover {
+        background-color: #f57c00;
+      }
 
-Memory Hierarchy Levels:
-1. Registers
-The smallest and fastest type of memory located directly inside the CPU. Registers hold data that is actively being processed by the CPU.
-Example: Program counters, accumulator registers.
+      .button-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 15px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="content">
+      <p id="paragraph">
+        Lorem ipsum dolor sit amet consectetur, adipisicing elit. Itaque maxime
+        unde veritatis soluta atque quisquam quia corporis vitae eius quod.
+      </p>
+    </div>
 
-2. Cache Memory
-Cache memory stores frequently accessed data and instructions to speed up processing. It is smaller and faster than main memory.
+    <script>
+      let highlightedSpans = []; // Array to keep track of highlighted spans
 
-Control Unit (CU)
-The Control Unit (CU) is a crucial component of the Central Processing Unit (CPU). It retrieves instructions from memory, decodes them, and sends control signals to various parts of the CPU, coordinating their actions.
+      // Listen for mouseup events to capture the selected text
+      document.addEventListener("mouseup", () => {
+        const selectedText = window.getSelection().toString();
 
-Types of Control Units
-1. Hardwired Control
-- Definition: Control signals are generated by fixed circuits based on the current instruction in the instruction register.
-- Advantages:
-  - Faster: Signals are generated immediately by the hardware.
-  - Simple Design: Suitable for simple architectures.
-- Disadvantages:
-  - Inflexible: Difficult to modify for new instructions or architectures.
-  - Complexity for Complex Systems: Hard to design for large instruction sets.
+        if (selectedText) {
+          const selectionRange = window.getSelection().getRangeAt(0);
+          const span = document.createElement("span");
+          span.className = "highlight";
+          span.dataset.comments = JSON.stringify([]); // Initialize empty comments array
+          span.dataset.id = Date.now(); // Assign a unique id to each highlighted span
 
-2. Microprogrammed Control
-- Definition: Control signals are generated by a sequence of micro-operations stored as microinstructions in memory.
-- Advantages:
-  - Flexible: Easier to modify without hardware changes.
-  - Easier to Design: Suitable for complex instruction sets.
-- Disadvantages:
-  - Slower: Fetching microinstructions takes time.
-  
-`;
+          selectionRange.surroundContents(span);
+          window.getSelection().removeAllRanges();
 
-      const margin = 10;
-      const pageHeight = pdf.internal.pageSize.height;
-      let yPosition = 30;
-      const lineHeight = 10;
-      const contentWidth = pdf.internal.pageSize.width - 2 * margin;
+          const icon = document.createElement("span");
+          icon.className = "comment-icon";
+          icon.textContent = "💬";
+          icon.title = "View Comments";
+          span.appendChild(icon);
 
-      // Split the content into lines that fit the page width
-      const splitContent = pdf.splitTextToSize(content, contentWidth);
+          highlightedSpans.push(span);
 
-      // Loop through the content and add it to the PDF, adding new pages as necessary
-      splitContent.forEach((line, index) => {
-        if (yPosition + lineHeight > pageHeight - margin) {
-          pdf.addPage(); // Add a new page if there's no more space
-          yPosition = 10; // Reset the position for the new page
+          // Attach click event to the comment icon
+          icon.addEventListener("click", () => {
+            showComments(span);
+          });
+
+          // Automatically open the comment box when text is selected
+          showComments(span);
         }
-        pdf.text(line, margin, yPosition);
-        yPosition += lineHeight; // Move the y position down for the next line
       });
 
-      // Save the PDF
-      pdf.save("Flip_Flops_Introduction.pdf");
-    });
-  </script>
-</body>
+      // Function to show the comment box for a highlighted span
+      function showComments(span) {
+        const existingCommentBox = document.querySelector(
+          `[data-span-id="${span.dataset.id}"]`
+        );
+
+        if (existingCommentBox) {
+          existingCommentBox.style.display = "block"; // Show the existing comment box
+
+          // Load and display existing comments from the span's dataset
+          const commentsList =
+            existingCommentBox.querySelector(".comments-list");
+          const existingComments = JSON.parse(span.dataset.comments);
+          commentsList.innerHTML = existingComments
+            .map((comment) => `<li>${comment}</li>`)
+            .join("");
+        } else {
+          const commentBox = document.createElement("div");
+          commentBox.classList.add("comment-box");
+          commentBox.setAttribute("data-span-id", span.dataset.id);
+
+          const commentsList = document.createElement("ul");
+          commentsList.classList.add("comments-list");
+
+          const newCommentTextarea = document.createElement("textarea");
+          newCommentTextarea.placeholder = "Add a new comment...";
+
+          const addCommentButton = document.createElement("button");
+          addCommentButton.textContent = "Add Comment";
+          addCommentButton.classList.add("add-comment-btn");
+
+          const closeButton = document.createElement("button");
+          closeButton.textContent = "Close";
+          closeButton.classList.add("close-btn");
+
+          const removeButton = document.createElement("button");
+          removeButton.textContent = "Remove Highlight";
+          removeButton.classList.add("remove-btn");
+
+          const buttonContainer = document.createElement("div");
+          buttonContainer.classList.add("button-container");
+
+          buttonContainer.appendChild(removeButton);
+          buttonContainer.appendChild(addCommentButton);
+          buttonContainer.appendChild(closeButton);
+
+          commentBox.appendChild(commentsList);
+          commentBox.appendChild(newCommentTextarea);
+          commentBox.appendChild(buttonContainer);
+
+          document.body.appendChild(commentBox);
+
+          // Load and display existing comments from the span's dataset
+          const existingComments = JSON.parse(span.dataset.comments);
+          commentsList.innerHTML = existingComments
+            .map((comment) => `<li>${comment}</li>`)
+            .join("");
+
+          removeButton.onclick = () => {
+            span.classList.remove("highlight");
+            const icon = span.querySelector(".comment-icon");
+            if (icon) icon.remove();
+            commentBox.remove();
+          };
+
+          closeButton.onclick = () => {
+            commentBox.style.display = "none"; // Hide the comment box temporarily
+          };
+
+          addCommentButton.onclick = () => {
+            const newComment = newCommentTextarea.value;
+            if (newComment.trim()) {
+              const comments = JSON.parse(span.dataset.comments);
+              comments.push(newComment);
+              span.dataset.comments = JSON.stringify(comments);
+
+              commentsList.innerHTML = comments
+                .map((comment) => `<li>${comment}</li>`)
+                .join("");
+
+              newCommentTextarea.value = "";
+            }
+          };
+        }
+      }
+    </script>
+  </body>
 </html>
